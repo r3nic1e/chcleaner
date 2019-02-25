@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/kshvakov/clickhouse"
 	"github.com/alecthomas/kingpin"
 	"github.com/r3nic1e/chcleaner"
@@ -32,8 +31,6 @@ func main() {
 		}
 		return
 	}
-
-	spew.Dump(chcleaner.GetAllPartitions(connect))
 
 	for _, cleaner := range chcleaner.Cleaners {
 		cleaner.Run(connect)

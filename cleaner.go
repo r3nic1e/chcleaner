@@ -20,7 +20,7 @@ func (t table) dropPartition(connect *sql.DB, part string) error {
 	return nil
 }
 
-func GetAllPartitions(connect *sql.DB) []table {
+func getAllPartitions(connect *sql.DB) []table {
 	rows, err := connect.Query("SELECT database, table, groupArray(partition) FROM system.parts WHERE active AND database != 'system' GROUP BY database, table")
 	if err != nil {
 		log.Fatal(err)
@@ -83,7 +83,7 @@ func (c *Cleaner) getPartitionsToDrop(t table) []string {
 
 func (c *Cleaner) Run(connect *sql.DB) error {
 	log.Println(fmt.Sprintf("Running cleaner for %v database, %v table", c.config.Databases, c.config.Tables))
-	tables := GetAllPartitions(connect)
+	tables := getAllPartitions(connect)
 	for _, t := range tables {
 		if !c.check(t) {
 			continue
