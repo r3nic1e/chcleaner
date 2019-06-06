@@ -5,8 +5,11 @@ language: go
 services:
   - docker
 
-script:
-  - docker build --build-arg "SHA1=$TRAVIS_COMMIT" --build-arg "TAG=$TRAVIS_TAG" --build-arg "DATE=$(date +'%Y-%m-%d')" -t r3nic1e/chcleaner:$TRAVIS_TAG .
+build:
+  provider: script
+  script: docker build -t r3nic1e/chcleaner:$TRAVIS_TAG .
+  on:
+    tags: true
 
 deploy:
   provider: script
