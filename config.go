@@ -1,7 +1,7 @@
 package chcleaner
 
 import (
-	"os"
+	"io"
 	"log"
 	"regexp"
 
@@ -13,6 +13,7 @@ var config struct {
 }
 
 type cleanerConfig struct {
+	Cron		string
 	Databases       []string
 	databasesRegexp []*regexp.Regexp
 	Tables          []string
@@ -40,14 +41,8 @@ func (c *cleanerConfig) Compile() {
 	}
 }
 
-func ReadConfig(path string) {
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	err = yaml.NewDecoder(f).Decode(&config)
+func ReadConfig(f io.Reader, dbAddr string) {
+	err := yaml.NewDecoder(f).Decode(&config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,6 +50,6 @@ func ReadConfig(path string) {
 	Cleaners = make([]*Cleaner, len(config.Rules))
 	for i, rule := range config.Rules {
 		rule.Compile()
-		Cleaners[i] = NewCleaner(rule)
+		Cleaners[i] = NewCleaner(rule, dbAddr)
 	}
 }

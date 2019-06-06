@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"log"
 	"sort"
+
+	"gopkg.in/robfig/cron.v2"
+	"github.com/kshvakov/clickhouse"
 )
 
 type table struct {
@@ -14,10 +17,9 @@ type table struct {
 
 func (t table) dropPartition(connect *sql.DB, part string) error {
 	sql := fmt.Sprintf("ALTER TABLE %s.%s DROP PARTITION %s", t.database, t.name, part)
-	//_, err := connect.Exec(sql)
-	//return err
 	log.Println(sql)
-	return nil
+	_, err := connect.Exec(sql)
+	return err
 }
 
 func getAllPartitions(connect *sql.DB) []table {
@@ -41,12 +43,39 @@ func getAllPartitions(connect *sql.DB) []table {
 
 type Cleaner struct {
 	config *cleanerConfig
+	connect *sql.DB
+	cron   *cron.Cron
 }
 
 var Cleaners []*Cleaner
 
-func NewCleaner(config *cleanerConfig) *Cleaner {
-	return &Cleaner{config: config}
+func NewCleaner(config *cleanerConfig, dbAddr string) *Cleaner {
+	c := &Cleaner{config: config}
+	if err := c.DBConnect(dbAddr); err != nil {
+		return nil
+	}
+	c.cron = cron.New()
+	c.cron.AddJob(config.Cron, c)
+	return c
+}
+
+func (c *Cleaner) DBConnect(dbAddr string) error {
+	connect, err := sql.Open("clickhouse", dbAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := connect.Ping(); err != nil {
+		if exception, ok := err.(*clickhouse.Exception); ok {
+			log.Printf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)
+		} else {
+			log.Fatal(err)
+		}
+		return err
+	}
+
+	c.connect = connect
+	return nil
 }
 
 func (c *Cleaner) checkDatabase(t table) bool {
@@ -81,9 +110,9 @@ func (c *Cleaner) getPartitionsToDrop(t table) []string {
 	return t.partitions[0:last_index]
 }
 
-func (c *Cleaner) Run(connect *sql.DB) error {
+func (c *Cleaner) Run() {
 	log.Println(fmt.Sprintf("Running cleaner for %v database, %v table", c.config.Databases, c.config.Tables))
-	tables := getAllPartitions(connect)
+	tables := getAllPartitions(c.connect)
 	for _, t := range tables {
 		if !c.check(t) {
 			continue
@@ -92,10 +121,13 @@ func (c *Cleaner) Run(connect *sql.DB) error {
 		log.Println(fmt.Sprintf("Table %s fits", t))
 
 		for _, part := range c.getPartitionsToDrop(t) {
-			if err := t.dropPartition(connect, part); err != nil {
+			if err := t.dropPartition(c.connect, part); err != nil {
 				log.Print(err)
 			}
 		}
 	}
-	return nil
+}
+
+func (c *Cleaner) Start() {
+	c.cron.Start()
 }

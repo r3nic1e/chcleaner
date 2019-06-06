@@ -1,38 +1,54 @@
 package main
 
 import (
-	"database/sql"
-	"log"
+	"runtime"
+	"io"
+	"os"
+	"strings"
 
-	"github.com/kshvakov/clickhouse"
 	"github.com/alecthomas/kingpin"
 	"github.com/r3nic1e/chcleaner"
 )
 
 var (
-	rulesPath = kingpin.Flag("rules", "Path to rules file").Default("rules.yml").Envar("RULES_PATH").ExistingFile()
+	rulesPath = kingpin.Flag("rules-file", "Path to rules file").Envar("RULES_PATH").ExistingFile()
+	rules = kingpin.Flag("rules", "Rules").Envar("RULES").String()
 	dbAddr = kingpin.Flag("db", "Clickhouse address").Default("tcp://127.0.0.1:9000").Envar("CLICKHOUSE_ADDR").URL()
-	runServer = kingpin.Command("server", "Run server")
+	socketAddr = kingpin.Flag("socket", "Socket address to bind to").Default("tcp://0.0.0.0:8000").Envar("SOCKET_ADDR").URL()
+	runServer = kingpin.Command("cron", "Run daemon")
+	runOnce = kingpin.Command("run", "Run once")
 )
 
 func main() {
-	_ = kingpin.Parse()
-	chcleaner.ReadConfig(*rulesPath)
-	connect, err := sql.Open("clickhouse", (*dbAddr).String())
-	if err != nil {
-		log.Fatal(err)
-	}
+	kingpin.CommandLine.HelpFlag.Short('h')
+	switch kingpin.Parse() {
+	case "cron":
+		rulesReader := openRules()
+		chcleaner.ReadConfig(rulesReader, (*dbAddr).String())
 
-	if err := connect.Ping(); err != nil {
-		if exception, ok := err.(*clickhouse.Exception); ok {
-			log.Printf("[%d] %s \n%s\n", exception.Code, exception.Message, exception.StackTrace)
-		} else {
-			log.Println(err)
+		for _, cleaner := range chcleaner.Cleaners {
+			cleaner.Start()
 		}
-		return
+
+		for {
+			runtime.Gosched()
+		}
+	case "run":
+		rulesReader := openRules()
+		chcleaner.ReadConfig(rulesReader, (*dbAddr).String())
+
+		for _, cleaner := range chcleaner.Cleaners {
+			cleaner.Run()
+		}
+	}
+}
+
+func openRules() io.Reader {
+	if *rulesPath != "" {
+		if f, err := os.Open(*rulesPath); err == nil {
+			return f
+		}
 	}
 
-	for _, cleaner := range chcleaner.Cleaners {
-		cleaner.Run(connect)
-	}
+	return strings.NewReader(*rules)
 }
