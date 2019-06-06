@@ -1,18 +1,17 @@
 sudo: required
 
-language: go
-
 services:
   - docker
 
-build:
-  provider: script
-  script: docker build -t r3nic1e/chcleaner:$TRAVIS_TAG .
-  on:
-    tags: true
-
-deploy:
-  provider: script
-  script: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin && docker push r3nic1e/chcleaner:$TRAVIS_TAG
-  on:
-    tags: true
+jobs:
+  include:
+    - stage: build docker image
+      script:
+        - docker build -t $TRAVIS_REPO_SLUG:$TRAVIS_COMMIT .
+    - stage: deploy image to docker hub
+      script:
+        - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        - docker tag $TRAVIS_REPO_SLUG
+        - docker push $TRAVIS_REPO_SLUG:$TRAVIS_TAG
+      on:
+        tags: true
