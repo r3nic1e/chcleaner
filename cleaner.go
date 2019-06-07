@@ -15,11 +15,15 @@ type table struct {
 	partitions     []string
 }
 
-func (t table) dropPartition(connect *sql.DB, part string) error {
+func (t table) dropPartition(connect *sql.DB, part string, test bool) error {
 	sql := fmt.Sprintf("ALTER TABLE %s.%s DROP PARTITION %s", t.database, t.name, part)
 	log.Println(sql)
-	_, err := connect.Exec(sql)
-	return err
+        if !test {
+                _, err := connect.Exec(sql)
+	        return err
+        } else {
+                return nil
+        }
 }
 
 func getAllPartitions(connect *sql.DB) []table {
@@ -45,12 +49,13 @@ type Cleaner struct {
 	config *cleanerConfig
 	connect *sql.DB
 	cron   *cron.Cron
+        test    bool
 }
 
 var Cleaners []*Cleaner
 
-func NewCleaner(config *cleanerConfig, dbAddr string) *Cleaner {
-	c := &Cleaner{config: config}
+func NewCleaner(config *cleanerConfig, dbAddr string, test bool) *Cleaner {
+	c := &Cleaner{config: config, test: test}
 	if err := c.DBConnect(dbAddr); err != nil {
 		return nil
 	}
@@ -121,7 +126,7 @@ func (c *Cleaner) Run() {
 		log.Println(fmt.Sprintf("Table %s fits", t))
 
 		for _, part := range c.getPartitionsToDrop(t) {
-			if err := t.dropPartition(c.connect, part); err != nil {
+			if err := t.dropPartition(c.connect, part, c.test); err != nil {
 				log.Print(err)
 			}
 		}

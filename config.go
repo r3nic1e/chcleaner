@@ -41,7 +41,7 @@ func (c *cleanerConfig) Compile() {
 	}
 }
 
-func ReadConfig(f io.Reader, dbAddr string) {
+func ReadConfig(f io.Reader, dbAddr string, test bool) {
 	err := yaml.NewDecoder(f).Decode(&config)
 	if err != nil {
 		log.Fatal(err)
@@ -50,6 +50,6 @@ func ReadConfig(f io.Reader, dbAddr string) {
 	Cleaners = make([]*Cleaner, len(config.Rules))
 	for i, rule := range config.Rules {
 		rule.Compile()
-		Cleaners[i] = NewCleaner(rule, dbAddr)
+		Cleaners[i] = NewCleaner(rule, dbAddr, test)
 	}
 }
