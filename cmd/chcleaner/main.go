@@ -1,9 +1,9 @@
 package main
 
 import (
-	"runtime"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/alecthomas/kingpin"
@@ -11,13 +11,13 @@ import (
 )
 
 var (
-	rulesPath = kingpin.Flag("rules-file", "Path to rules file").Envar("RULES_PATH").ExistingFile()
-	rules = kingpin.Flag("rules", "Rules").Envar("RULES").String()
-	dbAddr = kingpin.Flag("db", "Clickhouse address").Default("tcp://127.0.0.1:9000").Envar("CLICKHOUSE_ADDR").URL()
+	rulesPath  = kingpin.Flag("rules-file", "Path to rules file").Envar("RULES_PATH").ExistingFile()
+	rules      = kingpin.Flag("rules", "Rules").Envar("RULES").String()
+	dbAddr     = kingpin.Flag("db", "Clickhouse address").Default("tcp://127.0.0.1:9000").Envar("CLICKHOUSE_ADDR").URL()
 	socketAddr = kingpin.Flag("socket", "Socket address to bind to").Default("tcp://0.0.0.0:8000").Envar("SOCKET_ADDR").URL()
-        test = kingpin.Flag("test", "Do not actually delete partitions").Bool()
-	runServer = kingpin.Command("cron", "Run daemon")
-	runOnce = kingpin.Command("run", "Run once")
+	test       = kingpin.Flag("test", "Do not actually delete partitions").Bool()
+	runServer  = kingpin.Command("cron", "Run daemon")
+	runOnce    = kingpin.Command("run", "Run once")
 )
 
 func main() {

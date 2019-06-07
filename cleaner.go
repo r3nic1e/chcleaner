@@ -6,8 +6,8 @@ import (
 	"log"
 	"sort"
 
-	"gopkg.in/robfig/cron.v2"
 	"github.com/kshvakov/clickhouse"
+	"gopkg.in/robfig/cron.v2"
 )
 
 type table struct {
@@ -18,12 +18,12 @@ type table struct {
 func (t table) dropPartition(connect *sql.DB, part string, test bool) error {
 	sql := fmt.Sprintf("ALTER TABLE %s.%s DROP PARTITION %s", t.database, t.name, part)
 	log.Println(sql)
-        if !test {
-                _, err := connect.Exec(sql)
-	        return err
-        } else {
-                return nil
-        }
+	if !test {
+		_, err := connect.Exec(sql)
+		return err
+	} else {
+		return nil
+	}
 }
 
 func getAllPartitions(connect *sql.DB) []table {
@@ -46,10 +46,10 @@ func getAllPartitions(connect *sql.DB) []table {
 }
 
 type Cleaner struct {
-	config *cleanerConfig
+	config  *cleanerConfig
 	connect *sql.DB
-	cron   *cron.Cron
-        test    bool
+	cron    *cron.Cron
+	test    bool
 }
 
 var Cleaners []*Cleaner

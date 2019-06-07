@@ -13,7 +13,7 @@ var config struct {
 }
 
 type cleanerConfig struct {
-	Cron		string
+	Cron            string
 	Databases       []string
 	databasesRegexp []*regexp.Regexp
 	Tables          []string
