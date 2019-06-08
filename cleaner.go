@@ -15,6 +15,18 @@ type table struct {
 	partitions     []string
 }
 
+func uniq(slice []string) []string {
+	    keys := make(map[string]bool)
+	    list := []string{} 
+	    for _, entry := range slice {
+	        if _, value := keys[entry]; !value {
+	            keys[entry] = true
+	            list = append(list, entry)
+	        }
+	    }    
+	    return list
+	}
+
 func (t table) dropPartition(connect *sql.DB, part string, test bool) error {
 	sql := fmt.Sprintf("ALTER TABLE %s.%s DROP PARTITION %s", t.database, t.name, part)
 	log.Println(sql)
@@ -40,6 +52,7 @@ func getAllPartitions(connect *sql.DB) []table {
 		if err := rows.Scan(&t.database, &t.name, &t.partitions); err != nil {
 			log.Fatal(err)
 		}
+		t.partitions = uniq(t.partitions)
 		tables = append(tables, t)
 	}
 	return tables
